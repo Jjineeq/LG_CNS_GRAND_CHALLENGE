@@ -1,7 +1,8 @@
 from util import *
 import numpy as np
+from function import *
 
-def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
+def algorithm(K, all_orders, all_riders, dist_mat, timelimit):
 
     start_time = time.time()
 
@@ -36,7 +37,7 @@ def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
         
         while iter < max_merge_iter:
 
-            bundle1, bundle2 = select_two_bundles(all_bundles)
+            bundle1, bundle2 = select_two_bundles2(all_bundles, all_riders, dist_mat)
             new_bundle = try_merging_bundles(K, dist_mat, all_orders, bundle1, bundle2)
 
             if new_bundle is not None:
@@ -95,7 +96,7 @@ def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
     return solution
 
 problem_file = '../alg_test_problems_20240429/TEST_K100_1.json'
-timelimit = 60000000
+timelimit = 60
 
 
 with open(problem_file, 'r') as f:

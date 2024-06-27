@@ -186,9 +186,9 @@ def get_cheaper_available_riders(all_riders, rider):
     return None
 
 # 주어진 bundle list에서 임의로 두 개를 반환(중복없이)
-def select_two_bundles(all_bundles):
-    bundle1, bundle2 = random.sample(all_bundles, 2)
-    return bundle1, bundle2
+# def select_two_bundles(all_bundles):
+#     bundle1, bundle2 = random.sample(all_bundles, 2)
+#     return bundle1, bundle2
 
 # 평균 비용(목적함수) 계산
 # = 총 비용 / 주문 수
