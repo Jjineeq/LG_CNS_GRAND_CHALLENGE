@@ -1,13 +1,13 @@
-#%load_ext autoreload
-#%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 
 from util import *
 from myalgorithm import algorithm
 
-
 problem_file = '../alg_test_problems_20240429/TEST_K100_1.json'
-timelimit = 10
+timelimit = 30
 
+# np.random.seed(1)
 
 with open(problem_file, 'r') as f:
     prob = json.load(f)

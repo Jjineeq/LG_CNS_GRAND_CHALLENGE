@@ -35,7 +35,7 @@ def select_two_bundles2(all_bundles, all_riders, dist_mat):
     bundles_del_ready_time = []
     for i, bundle in enumerate(capa_all_bundles):
         ready_time_bundle = bundle.all_orders[bundle.dlv_seq[0]].ready_time
-        if abs(ready_time_bundle - ready_time_bundle1) <= 3000:
+        if abs(ready_time_bundle - ready_time_bundle1) <= 3500:
             bundles_keep_ready_time.append(i)
         else:
             bundles_del_ready_time.append(i)

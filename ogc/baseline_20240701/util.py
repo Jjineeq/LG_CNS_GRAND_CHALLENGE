@@ -9,10 +9,17 @@ import pprint
 import matplotlib.pyplot as plt
 
 
+# Change history
+# 2024/7/1 - Update total_dist for a new bundle as well in try_bundle_rider_changing()
+# 2024/6/21 - Fixed a comment in Order.__init__()
+# 2024/6/16 - Fixed a bug that does not set the bundle routes in try_bundle_rider_changing()
+# 2024/5/17 - Fixed a bug in get_pd_times()
+
+
 # 주문 class
 class Order:
     def __init__(self, order_info):
-        # [ORD_ID, ORD_TIME, SHOP_LAT, SHOP_LON, DLV_LAT, DLV_LON, VOL, COOK_TIME, DLV_DEADLINE]
+        # [ORD_ID, ORD_TIME, SHOP_LAT, SHOP_LON, DLV_LAT, DLV_LON, COOK_TIME, VOL, DLV_DEADLINE]
         self.id = order_info[0]
         self.order_time = order_info[1]
         self.shop_lat = order_info[2]
@@ -150,7 +157,8 @@ def try_merging_bundles(K, dist_mat, all_orders, bundle1, bundle2):
         riders = [bundle1.rider, bundle2.rider]
 
     for rider in riders:
-        if total_volume <= rider.capa:
+        # We skip the test if there are too many orders
+        if total_volume <= rider.capa and len(merged_orders) <= 5:
             for shop_pem in permutations(merged_orders):
                 for dlv_pem in permutations(merged_orders):
                     feasibility_check = test_route_feasibility(all_orders, rider, shop_pem, dlv_pem)
@@ -162,7 +170,7 @@ def try_merging_bundles(K, dist_mat, all_orders, bundle1, bundle2):
 
 # 주어진 bundle의 배달원을 변경하는것이 가능한지 테스트
 # Note: 원래 bindle의 방문 순서가 최적이 아닐수도 있기 때문에 방문 순서 조합을 다시 확인함
-def try_bundle_rider_changing(all_orders, bundle, rider):
+def try_bundle_rider_changing(all_orders, dist_mat, bundle, rider):
     if bundle.rider.type != rider.type and bundle.total_volume <= rider.capa:
         orders = bundle.shop_seq
         for shop_pem in permutations(orders):
@@ -170,7 +178,10 @@ def try_bundle_rider_changing(all_orders, bundle, rider):
                 feasibility_check = test_route_feasibility(all_orders, rider, shop_pem, dlv_pem)
                 if feasibility_check == 0: # feasible!
                     # Note: in-place replacing!
+                    bundle.shop_seq = list(shop_pem)
+                    bundle.dlv_seq = list(dlv_pem)
                     bundle.rider = rider
+                    bundle.total_dist = get_total_distance(len(all_orders), dist_mat, bundle.shop_seq, bundle.dlv_seq)
                     bundle.update_cost()
                     return True
 
@@ -186,9 +197,9 @@ def get_cheaper_available_riders(all_riders, rider):
     return None
 
 # 주어진 bundle list에서 임의로 두 개를 반환(중복없이)
-# def select_two_bundles(all_bundles):
-#     bundle1, bundle2 = random.sample(all_bundles, 2)
-#     return bundle1, bundle2
+def select_two_bundles(all_bundles):
+    bundle1, bundle2 = random.sample(all_bundles, 2)
+    return bundle1, bundle2
 
 # 평균 비용(목적함수) 계산
 # = 총 비용 / 주문 수
@@ -284,7 +295,7 @@ def solution_check(K, all_orders, all_riders, dist_mat, solution):
             for k in dlv_seq:
                 all_deliveies.append(k)
                 if dlv_times[k] > all_orders[k].deadline:
-                    infeasibility = f'Order {k} deadline is violated!: {dlv_times[k]} > {dlv_times[k]}'
+                    infeasibility = f'Order {k} deadline is violated!: {dlv_times[k]} > {all_orders[k].deadline}'
                     break
             
             dist = get_total_distance(K, dist_mat, shop_seq, dlv_seq)
@@ -293,26 +304,30 @@ def solution_check(K, all_orders, all_riders, dist_mat, solution):
             total_dist += dist
             total_cost += cost
 
-
-        # Check used number of riders
-        for r in all_riders:
-            if r.available_number < used_riders[r.type]:
-                infeasibility = f'The number of used riders of type {r.type} exceeds the given available limit!'
+            if infeasibility is not None:
                 break
 
-        # Check deliveries
-        for k in range(K):
-            count = 0
-            for k_sol in all_deliveies:
-                if k == k_sol:
-                    count += 1
 
-            if count > 1:
-                infeasibility = f'Order {k} is assigned more than once! ===> {count} > 1'
-                break
-            elif count == 0:
-                infeasibility = f'Order {k} is NOT assigned!'
-                break
+        if infeasibility is None:
+            # Check used number of riders
+            for r in all_riders:
+                if r.available_number < used_riders[r.type]:
+                    infeasibility = f'The number of used riders of type {r.type} exceeds the given available limit!'
+                    break
+
+            # Check deliveries
+            for k in range(K):
+                count = 0
+                for k_sol in all_deliveies:
+                    if k == k_sol:
+                        count += 1
+
+                if count > 1:
+                    infeasibility = f'Order {k} is assigned more than once! ===> {count} > 1'
+                    break
+                elif count == 0:
+                    infeasibility = f'Order {k} is NOT assigned!'
+                    break
 
     else:
         infeasibility = 'Solution must be a list of bundle information!'
