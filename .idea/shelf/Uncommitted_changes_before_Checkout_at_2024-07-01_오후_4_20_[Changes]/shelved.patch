@@ -1,0 +1,19 @@
+Index: ogc/baseline_20240701/myalgorithm.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from util import *\r\nimport numpy as np\r\nfrom ogc.baseline_20240701.function import *\r\n\r\ndef algorithm(K, all_orders, all_riders, dist_mat, timelimit=60):\r\n\r\n    start_time = time.time()\r\n\r\n    for r in all_riders:\r\n        r.T = np.round(dist_mat/r.speed + r.service_time)\r\n\r\n    # A solution is a list of bundles\r\n    solution = []\r\n\r\n    #------------- Custom algorithm code starts from here --------------#\r\n\r\n    car_rider = None\r\n    for r in all_riders:\r\n        if r.type == 'CAR':\r\n            car_rider = r\r\n\r\n    all_bundles = []\r\n\r\n    for ord in all_orders:\r\n        new_bundle = Bundle(all_orders, car_rider, [ord.id], [ord.id], ord.volume, dist_mat[ord.id, ord.id+K])\r\n        all_bundles.append(new_bundle)\r\n        car_rider.available_number -= 1\r\n\r\n    best_obj = sum((bundle.cost for bundle in all_bundles)) / K\r\n    print(f'Best obj = {best_obj}')\r\n\r\n\r\n    # Very stupid random merge algorithm\r\n    while True:\r\n\r\n        iter = 0\r\n        max_merge_iter = 1000\r\n        \r\n        while iter < max_merge_iter:\r\n\r\n            bundle1, bundle2 = select_two_bundles2(all_bundles, all_riders, dist_mat)\r\n            # bundle1, bundle2 = select_two_bundles(all_bundles)\r\n            new_bundle = try_merging_bundles(K, dist_mat, all_orders, bundle1, bundle2)\r\n\r\n            if new_bundle is not None:\r\n                all_bundles.remove(bundle1)\r\n                bundle1.rider.available_number += 1\r\n                \r\n                all_bundles.remove(bundle2)\r\n                bundle2.rider.available_number += 1\r\n\r\n                all_bundles.append(new_bundle)\r\n                new_bundle.rider.available_number -= 1\r\n\r\n                cur_obj = sum((bundle.cost for bundle in all_bundles)) / K\r\n                if cur_obj < best_obj:\r\n                    best_obj = cur_obj\r\n                    print(f'Best obj = {best_obj}')\r\n\r\n            else:\r\n                iter += 1\r\n\r\n            if time.time() - start_time > timelimit:\r\n                break\r\n\r\n        if time.time() - start_time > timelimit:\r\n            break\r\n\r\n\r\n        for bundle in all_bundles:\r\n            new_rider = get_cheaper_available_riders(all_riders, bundle.rider)\r\n            if new_rider is not None:\r\n                old_rider = bundle.rider\r\n                if try_bundle_rider_changing(all_orders, dist_mat, bundle, new_rider):\r\n                    old_rider.available_number += 1\r\n                    new_rider.available_number -= 1\r\n\r\n                if time.time() - start_time > timelimit:\r\n                    break\r\n\r\n\r\n        cur_obj = sum((bundle.cost for bundle in all_bundles)) / K\r\n        if cur_obj < best_obj:\r\n            best_obj = cur_obj\r\n            print(f'Best obj = {best_obj}')\r\n\r\n\r\n    # Solution is a list of bundle information\r\n    solution = [\r\n        # rider type, shop_seq, dlv_seq\r\n        [bundle.rider.type, bundle.shop_seq, bundle.dlv_seq]\r\n        for bundle in all_bundles\r\n    ]\r\n\r\n    #------------- End of custom algorithm code--------------#\r\n\r\n\r\n\r\n    return solution\r\n    
+===================================================================
+diff --git a/ogc/baseline_20240701/myalgorithm.py b/ogc/baseline_20240701/myalgorithm.py
+--- a/ogc/baseline_20240701/myalgorithm.py	
++++ b/ogc/baseline_20240701/myalgorithm.py	
+@@ -2,8 +2,8 @@
+ import numpy as np
+ from ogc.baseline_20240701.function import *
+ 
+-def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60):
+-
++def algorithm(K, all_orders, all_riders, dist_mat, timelimit):
++    timelimit -= 5
+     start_time = time.time()
+ 
+     for r in all_riders:
