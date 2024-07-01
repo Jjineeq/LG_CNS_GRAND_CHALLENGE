@@ -1,7 +1,8 @@
 from util import *
 import numpy as np
+from ogc.baseline_20240701.function import *
 
-def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
+def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60):
 
     start_time = time.time()
 
@@ -28,6 +29,7 @@ def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
     best_obj = sum((bundle.cost for bundle in all_bundles)) / K
     print(f'Best obj = {best_obj}')
 
+
     # Very stupid random merge algorithm
     while True:
 
@@ -36,7 +38,8 @@ def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
         
         while iter < max_merge_iter:
 
-            bundle1, bundle2 = select_two_bundles(all_bundles)
+            bundle1, bundle2 = select_two_bundles2(all_bundles, all_riders, dist_mat)
+            # bundle1, bundle2 = select_two_bundles(all_bundles)
             new_bundle = try_merging_bundles(K, dist_mat, all_orders, bundle1, bundle2)
 
             if new_bundle is not None:
@@ -63,11 +66,12 @@ def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
         if time.time() - start_time > timelimit:
             break
 
+
         for bundle in all_bundles:
             new_rider = get_cheaper_available_riders(all_riders, bundle.rider)
             if new_rider is not None:
                 old_rider = bundle.rider
-                if try_bundle_rider_changing(all_orders, bundle, new_rider):
+                if try_bundle_rider_changing(all_orders, dist_mat, bundle, new_rider):
                     old_rider.available_number += 1
                     new_rider.available_number -= 1
 
@@ -93,57 +97,4 @@ def algorithm(K, all_orders, all_riders, dist_mat, timelimit=60000):
 
 
     return solution
-
-problem_file = '../alg_test_problems_20240429/TEST_K100_1.json'
-timelimit = 60000000
-
-
-with open(problem_file, 'r') as f:
-    prob = json.load(f)
-
-K = prob['K']
-
-ALL_ORDERS = [Order(order_info) for order_info in prob['ORDERS']]
-ALL_RIDERS = [Rider(rider_info) for rider_info in prob['RIDERS']]
-
-DIST = np.array(prob['DIST'])
-for r in ALL_RIDERS:
-    r.T = np.round(DIST/r.speed + r.service_time)
-
-alg_start_time = time.time()
-
-exception = None
-
-solution = None
-try:
-    # Run algorithm!
-    solution = algorithm(K, ALL_ORDERS, ALL_RIDERS, DIST, timelimit)
-except Exception as e:
-    exception = f'{e}'
-
-
-alg_end_time = time.time()
-
-with open(problem_file, 'r') as f:
-    prob = json.load(f)
-
-K = prob['K']
-
-ALL_ORDERS = [Order(order_info) for order_info in prob['ORDERS']]
-ALL_RIDERS = [Rider(rider_info) for rider_info in prob['RIDERS']]
-
-DIST = np.array(prob['DIST'])
-for r in ALL_RIDERS:
-    r.T = np.round(DIST/r.speed + r.service_time)
-
-checked_solution = solution_check(K, ALL_ORDERS, ALL_RIDERS, DIST, solution)
-
-checked_solution['time'] = alg_end_time - alg_start_time
-checked_solution['timelimit_exception'] = (alg_end_time - alg_start_time) > timelimit + 1 # allowing additional 1 second!
-checked_solution['exception'] = exception
-
-checked_solution['prob_name'] = prob['name']
-checked_solution['prob_file'] = problem_file
-
-print(checked_solution)
     
